@@ -1,14 +1,44 @@
+/**
+ * Universidad del Valle de Guatemala
+ * Programación Paralela y Distribuida
+ * Sección 10
+ * 
+ * Proyecto 2
+ * 
+ * Integrantes:
+ * Abner Iván García Alegría 21285
+ * Oscar Esteban Donis Martínez 21610
+ * Dariel Eduardo Villatoro 20776
+ * 
+ * Archivo:     bruteforce.c
+ * 
+ * Propósito:   Implementa un algoritmo de fuerza bruta para poder decifrar una 
+ *              frase cifrada con el algoritmo DES de manera paralela.
+ *
+ * Compile:     mpicc -o bruteforce bruteforce.c -lcrypto
+ * Run:         mpiexec -n <comm_sz> ./bruteforce
+ */
+
 // bruteforce.c
 // Nota: El key usado es bastante pequeño, cuando sea random speedup variará
 
+// Incluimos las librerías necesarias
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <mpi.h>
-#include <stdint.h>          // Para uint64_t
+#include <stdint.h>
 #include <openssl/des.h>
 
-// Función para descifrar usando OpenSSL DES
+/**
+ * Función para descifrar usando OpenSSL DES
+ * 
+ * @param key       Clave para descifrar
+ * @param ciph      Texto cifrado
+ * @param len       Longitud del texto cifrado
+ * 
+ * @return void
+ */
 void decrypt(uint64_t key, unsigned char *ciph, int len){
     DES_cblock key_block;
     DES_key_schedule schedule;
@@ -32,7 +62,15 @@ void decrypt(uint64_t key, unsigned char *ciph, int len){
     DES_ecb_encrypt((DES_cblock *)ciph, (DES_cblock *)ciph, &schedule, DES_DECRYPT);
 }
 
-// Función para cifrar usando OpenSSL DES (si es necesario)
+/**
+ * Función para cifrar usando OpenSSL DES (si es necesario)
+ * 
+ * @param key       Clave para cifrar
+ * @param ciph      Texto cifrado
+ * @param len       Longitud del texto cifrado
+ * 
+ * @return void
+ */
 void encrypt(uint64_t key, unsigned char *ciph, int len){
     DES_cblock key_block;
     DES_key_schedule schedule;
@@ -56,6 +94,15 @@ void encrypt(uint64_t key, unsigned char *ciph, int len){
 }
 
 const char search[] = " the ";
+/**
+ * Función para probar una clave
+ * 
+ * @param key       Clave a probar
+ * @param ciph      Texto cifrado
+ * @param len       Longitud del texto cifrado
+ * 
+ * @return int
+ */
 int tryKey(uint64_t key, unsigned char *ciph, int len){
     unsigned char temp[len];
     memcpy(temp, ciph, len);
@@ -70,6 +117,15 @@ int tryKey(uint64_t key, unsigned char *ciph, int len){
 }
 
 unsigned char cipher[] = {108, 245, 65, 63, 125, 200, 150, 66, 17, 170, 207, 170, 34, 31, 70, 215, 0};
+
+/**
+ * Función principal
+ * 
+ * @param argc      Cantidad de argumentos
+ * @param argv      Argumentos
+ * 
+ * @return int
+ */
 int main(int argc, char *argv[]){
     int N, id;
     // Usar uint64_t para asegurar 64 bits

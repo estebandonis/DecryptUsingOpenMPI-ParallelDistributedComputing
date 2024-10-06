@@ -1,3 +1,24 @@
+/**
+ * Universidad del Valle de Guatemala
+ * Programación Paralela y Distribuida
+ * Sección 10
+ * 
+ * Proyecto 2
+ * 
+ * Integrantes:
+ * Abner Iván García Alegría 21285
+ * Oscar Esteban Donis Martínez 21610
+ * Dariel Eduardo Villatoro 20776
+ * 
+ * Archivo:     sequencial.c
+ * 
+ * Propósito:   Implementa un algoritmo de fuerza bruta para poder decifrar una 
+ *              frase cifrada con el algoritmo DES de manera secuencial.
+ *
+ * Compile:     gcc sequencial.c -o sequencial -lcrypto
+ * Run:         ./sequencial
+ */
+
 #include <stdio.h>
 #include <string.h>
 #include <openssl/des.h>
