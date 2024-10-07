@@ -15,88 +15,173 @@
  * Propósito:   Implementa un algoritmo de fuerza bruta para poder decifrar una 
  *              frase cifrada con el algoritmo DES de manera secuencial.
  *
- * Compile:     gcc sequencial.c -o sequencial -lcrypto
- * Run:         ./sequencial
+ * Compile:     gcc -o sequencial sequencial.c -lcrypto -lssl -w
+ * Run:         ./sequencial -k <llave>
  */
 
-#include <stdio.h>
 #include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 #include <openssl/des.h>
 #include <time.h>
 
-/**
- * @brief Función que descifra un bloque de 64 bits usando el algoritmo DES
- * y luego compara con la palabra que conocemos si es la clave o no.
- * 
- * @param plaintext Texto claro de 64 bits.
- * @param key Clave de 64 bits.
- * @param ciphertext Texto cifrado de 64 bits.
- */
-void des_encrypt(const unsigned char *plaintext, const unsigned char *key, unsigned char *ciphertext) {
-    // Estructura que almacena la clave DES
+void decrypt(long key, char *ciph, int len) {
+    DES_cblock key_block;
     DES_key_schedule schedule;
-    // Estructura que lleva un registro de las claves utilizadas
-    DES_set_key_unchecked((const_DES_cblock *)key, &schedule);
-    // Funcion que desencripta un bloque de 64 bits y lo guarda en ciphertext
-    DES_ecb_encrypt((const_DES_cblock *)plaintext, (DES_cblock *)ciphertext, &schedule, DES_ENCRYPT);
+
+    memset(key_block, 0, sizeof(DES_cblock));
+    memcpy(key_block, &key, sizeof(long));
+
+    DES_set_key_unchecked(&key_block, &schedule);
+
+    for (int i = 0; i < len; i += 8) {
+        DES_ecb_encrypt((DES_cblock *)(ciph + i), (DES_cblock *)(ciph + i), &schedule, DES_DECRYPT);
+    }
 }
 
-/**
- * @brief Función principal que prueba todas las claves posibles de 56 y 64 bits
- * para descifrar un texto cifrado y verificar si coincide con una palabra clave conocida.
- * 
- * @return int 
- */
-int main() {
-    // Inicializar variables de tiempo y uso de CPU
-    clock_t start, end;
-    double cpu_time_used;
-    // Texto cifrado de 64 bits
-    unsigned char ciphertext[8] = {0x12, 0x34, 0x56, 0x78, 0x90, 0xAB, 0xCD, 0xEF};
-    // Palabra clave conocida
-    char* known_keyword = "tu_palabra_clave";
-    // Longitudes de clave DES válidas en bits
-    int key_lengths[] = {56, 64};
-    // Probar todas las longitudes de clave
-    for (int i = 0; i < sizeof(key_lengths) / sizeof(key_lengths[0]); i++) {
-        // Longitud de la clave en bytes
-        int key_length = key_lengths[i] / 8;
-        // Inicializar la clave a 0
-        unsigned char key[8] = {0};
-        // Iniciar el cronómetro
-        start = clock();
-        // Probar todas las claves posibles de la longitud actual
-        for (unsigned long long candidate = 0; candidate < (1ULL << (key_lengths[i])); candidate++) {
-            // Copiar la clave candidata en el buffer de la clave
-            memcpy(key, &candidate, key_length);
-            // Buffer para almacenar el texto descifrado
-            unsigned char decrypted_text[8];
-            // Descifrar el texto cifrado con la clave candidata
-            des_encrypt(ciphertext, key, decrypted_text);
-            // Imprimir información sobre la clave que se está probando
-            printf("Probando clave: ");
-            for (int j = 0; j < key_length; j++) {
-                printf("%02X", key[j]);
-            }
-            printf("\n");
-            // Verificar si el texto descifrado coincide con el texto conocido
-            if (memcmp(decrypted_text, known_keyword, strlen(known_keyword)) == 0) {
-                // Detener el cronómetro
-                end = clock();
-                // Calcular el tiempo transcurrido
-                cpu_time_used = ((double)(end - start)) / CLOCKS_PER_SEC;
-                // Imprimir la clave encontrada correcta
-                printf("Clave encontrada: ");
-                for (int j = 0; j < key_length; j++) {
-                    printf("%02X", key[j]);
-                }
-                // Imprimir el tiempo transcurrido
-                printf(" en %.2lf segundos para clave de %d bits.\n", cpu_time_used, key_lengths[i]);
-                // Salir del bucle si se encuentra la clave correcta
-                break;
-            }
+void encrypt(long key, char *ciph, int len) {
+    DES_cblock key_block;
+    DES_key_schedule schedule;
+
+    memset(key_block, 0, sizeof(DES_cblock));
+    memcpy(key_block, &key, sizeof(long));
+
+    DES_set_key_unchecked(&key_block, &schedule);
+
+    for (int i = 0; i < len; i += 8) {
+        DES_ecb_encrypt((DES_cblock *)(ciph + i), (DES_cblock *)(ciph + i), &schedule, DES_ENCRYPT);
+    }
+}
+
+char search[] = "es una prueba de";
+
+int tryKey(long key, char *ciph, int len) {
+    char temp[len + 1];
+    memcpy(temp, ciph, len);
+    temp[len] = 0;
+    decrypt(key, temp, len);
+
+    if (strstr((char *)temp, search) != NULL) {
+        printf("Key found: %li\n", key);
+        return 1;
+    }
+
+    return 0;
+}
+
+int loadTextFromFile(const char *filename, char **text, int *length) {
+    FILE *file = fopen(filename, "r");
+    if (file == NULL) {
+        perror("Error opening file");
+        return 0;
+    }
+
+    fseek(file, 0, SEEK_END);
+    *length = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    *text = (char *)malloc(*length);
+    if (*text == NULL) {
+        perror("Memory allocation error");
+        fclose(file);
+        return 0;
+    }
+
+    fread(*text, 1, *length, file);
+    fclose(file);
+
+    return 1;
+}
+
+int saveTextToFile(const char *filename, char *text, int length) {
+    FILE *file = fopen(filename, "w");
+    if (file == NULL) {
+        perror("Error opening file");
+        return 0;
+    }
+
+    fwrite(text, 1, length, file);
+    fclose(file);
+
+    return 1;
+}
+
+unsigned char cipher[] = {108, 245, 65, 63, 125, 200, 150, 66, 17, 170, 207, 170, 34, 31, 70, 215, 0};
+
+int main(int argc, char *argv[]) {
+    long upper = (1L << 56);
+    long mylower = 0;
+    long myupper = upper;
+    char *text;
+    int textLength;
+
+    clock_t start_time, end_time;
+    long encryptionKey = 123456L;
+
+    int option;
+
+    while ((option = getopt(argc, argv, "k:")) != -1) {
+        switch (option) {
+        case 'k':
+            encryptionKey = atol(optarg);
+            break;
+        default:
+            fprintf(stderr, "Usage: %s [-k key]\n", argv[0]);
+            exit(1);
         }
     }
-    // Salir del programa
+
+    start_time = clock();
+
+    if (!loadTextFromFile("input.txt", &text, &textLength)) {
+        return 1;
+    }
+
+    // aplicar padding
+    int padding = 8 - (textLength % 8);
+    if (padding < 8) {
+        memset(text + textLength, padding, padding);
+        textLength += padding;
+    }
+
+    encrypt(encryptionKey, text, textLength);
+
+    if (!saveTextToFile("encrypted.txt", text, textLength)) {
+        free(text);
+        return 1;
+    }
+
+    free(text);
+
+    long found = 0;
+
+    for (long i = mylower; i < myupper && (found == 0); ++i) {
+        if (tryKey(i, text, textLength)) {
+            found = i;
+            break;
+        }
+    }
+
+    end_time = clock();
+
+    text = (char *)malloc(textLength);
+    if (!loadTextFromFile("encrypted.txt", &text, &textLength)) {
+        free(text);
+        return 1;
+    }
+
+    decrypt(found, text, textLength);
+
+    printf("%li %s\n", found, text);
+    printf("Execution time: %f seconds\n", ((double)(end_time - start_time)) / CLOCKS_PER_SEC);
+
+    if (!saveTextToFile("decrypted.txt", text, textLength)) {
+        free(text);
+        return 1;
+    }
+
+    free(text);
+
     return 0;
 }
