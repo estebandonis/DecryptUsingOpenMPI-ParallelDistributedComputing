@@ -15,6 +15,7 @@
 #include <openssl/des.h>
 #include <ctype.h>
 #include <time.h>
+#include <getopt.h>
 
 void decrypt(long key, char *ciph, int len) {
     // printf("Decrypting with key: %ld\n", key);
@@ -185,7 +186,8 @@ int main(int argc, char *argv[]){
 
   MPI_Irecv(&found, 1, MPI_LONG, MPI_ANY_SOURCE, MPI_ANY_TAG, comm, &req);
 
-  for (int i = 0 + id; i < upper && (found == 0); i += N) {
+  // Distribuye el trabajo entre los nodos
+  for (int i = id; i < upper && (found == 0); i += N) {
     if (tryKey(i, text, textLength)) {
       found = i;
       for (int node = 0; node < N; node++) {
