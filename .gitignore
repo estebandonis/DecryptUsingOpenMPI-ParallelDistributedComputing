@@ -1,5 +1,7 @@
 sequencial
 bruteforce
 parallel
+randomsearch
+distributed
 .vscode
 *.ciph
