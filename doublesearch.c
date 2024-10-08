@@ -193,8 +193,8 @@ int main(int argc, char *argv[]){
 
   MPI_Irecv(&found, 1, MPI_LONG, MPI_ANY_SOURCE, MPI_ANY_TAG, comm, &req);
 
-  int left_side = (mylower + myupper) / 2;
-  int right_side = left_side + 1;
+  long left_side = (mylower + myupper) / 2;
+  long right_side = left_side + 1;
 
   // Distribuye el trabajo entre los nodos 
   while (left_side >= mylower && right_side <= myupper && (found == 0)) {
