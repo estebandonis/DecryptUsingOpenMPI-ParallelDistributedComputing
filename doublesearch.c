@@ -15,6 +15,7 @@
 #include <openssl/des.h>
 #include <ctype.h>
 #include <time.h>
+#include <getopt.h>
 
 void decrypt(long key, char *ciph, int len) {
     // printf("Decrypting with key: %ld\n", key);
@@ -115,28 +116,6 @@ int saveTextToFile(const char *filename, char *text, int length) {
   return 1;
 }
 
-void swap(long *a, long *b) {
-    long temp = *a;
-    *a = *b;
-    *b = temp;
-}
-
-void generateRandomArray(long* arr, long size, long lower, long upper) {
-  // Llenar el array con los números en el rango
-  printf("Array size: %ld\n", size);
-  for (long i = 0; i < size; i++) {
-    arr[i] = lower + i;
-    printf("Array[%ld]: %ld\n", i, arr[i]);
-  }
-
-  // Barajar el array usando el algoritmo de Fisher-Yates
-  srand(time(NULL)); // Inicializar la semilla de números aleatorios
-  for (long i = size - 1; i > 0; i--) {
-    long j = rand() % (i + 1); // Elegir un índice aleatorio
-    swap(&arr[i], &arr[j]);    // Intercambiar el elemento actual con el aleatorio
-  }
-}
-
 int main(int argc, char *argv[]){
   int N, id;
   long upper = (1L << 56); // Límite superior para claves DES: 2^56
@@ -175,7 +154,7 @@ int main(int argc, char *argv[]){
   start_time = MPI_Wtime();
 
   // Calcula el rango de claves que cada proceso MPI debe buscar
-  long range_per_node = upper / N;
+  int range_per_node = upper / N;
   mylower = range_per_node * id;
   myupper = range_per_node * (id+1) - 1;
   if (id == N - 1) {
@@ -214,22 +193,32 @@ int main(int argc, char *argv[]){
 
   MPI_Irecv(&found, 1, MPI_LONG, MPI_ANY_SOURCE, MPI_ANY_TAG, comm, &req);
 
-  long range_size = (myupper - mylower) + 1;
-  long *random_range = (long *)malloc(range_size * sizeof(long));
-  generateRandomArray(random_range, range_size, mylower, myupper);
+  int left_side = (mylower + myupper) / 2;
+  int right_side = left_side + 1;
 
-  for (int i = 0; i < range_size && (found == 0); ++i) {
-    int k = random_range[i];
-    if (tryKey(k, text, textLength)) {
-      found = k;
+  // Distribuye el trabajo entre los nodos 
+  while (left_side >= mylower && right_side <= myupper && (found == 0)) {
+    // Busca la clave en el lado izquierdo del rango
+    if (tryKey(left_side, text, textLength)) {
+      found = left_side;
       for (int node = 0; node < N; node++) {
         MPI_Send(&found, 1, MPI_LONG, node, 0, MPI_COMM_WORLD);
       }
       break;
     }
-  }
 
-  free(random_range);
+    // Busca la clave en el lado derecho del rango
+    if (tryKey(right_side, text, textLength)) {
+      found = right_side;
+      for (int node = 0; node < N; node++) {
+        MPI_Send(&found, 1, MPI_LONG, node, 0, MPI_COMM_WORLD);
+      }
+      break;
+    }
+
+    left_side--;
+    right_side++;
+  }
 
   if (id == 0) {
     MPI_Wait(&req, &st);
