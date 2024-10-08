@@ -119,6 +119,7 @@ int saveTextToFile(const char *filename, char *text, int length) {
 int main(int argc, char *argv[]){
   int N, id;
   long upper = (1L << 56); // Límite superior para claves DES: 2^56
+  long mylower, myupper;
   MPI_Status st;
   MPI_Request req;
   int flag;
@@ -154,6 +155,12 @@ int main(int argc, char *argv[]){
 
   // Calcula el rango de claves que cada proceso MPI debe buscar
   int range_per_node = upper / N; 
+  mylower = range_per_node * id;
+  myupper = range_per_node * (id+1) - 1;
+  if (id == N - 1) {
+    // Compensar el residuo
+    myupper = upper;
+  }
 
   char *text; // Texto para encriptar y desencriptar
   int textLength;
@@ -186,15 +193,60 @@ int main(int argc, char *argv[]){
 
   MPI_Irecv(&found, 1, MPI_LONG, MPI_ANY_SOURCE, MPI_ANY_TAG, comm, &req);
 
+  long q1 = mylower + range_per_node / 4;
+  long q2 = mylower + range_per_node / 2;
+  long q3 = mylower + q1 + q2;
+
+  long i0 = mylower;
+  long i1 = q1;
+  long i2 = q2;
+  long i3 = q3;
+
   // Distribuye el trabajo entre los nodos
-  for (int i = id; i < upper && (found == 0); i += N) {
-    if (tryKey(i, text, textLength)) {
-      found = i;
+  while (
+    (i0 < q1 || i1 < q2 || i2 < q3 || i3 <= myupper) &&
+    (found == 0)
+    ) {
+    // Busca la clave en el 1/4 del rango
+    if (i0 < q1 && tryKey(i0, text, textLength)) {
+      found = i0;
       for (int node = 0; node < N; node++) {
         MPI_Send(&found, 1, MPI_LONG, node, 0, MPI_COMM_WORLD);
       }
       break;
     }
+
+    // Busca la clave en el 2/4 del rango
+    if (i1 < q2 && tryKey(i1, text, textLength)) {
+      found = i1;
+      for (int node = 0; node < N; node++) {
+        MPI_Send(&found, 1, MPI_LONG, node, 0, MPI_COMM_WORLD);
+      }
+      break;
+    }
+
+    // Busca la clave en el 3/4 del rango
+    if (i2 < q3 && tryKey(i2, text, textLength)) {
+      found = i2;
+      for (int node = 0; node < N; node++) {
+        MPI_Send(&found, 1, MPI_LONG, node, 0, MPI_COMM_WORLD);
+      }
+      break;
+    }
+
+    // Busca la clave en el 4/4 del rango
+    if (i3 <= myupper && tryKey(i3, text, textLength)) {
+      found = i2;
+      for (int node = 0; node < N; node++) {
+        MPI_Send(&found, 1, MPI_LONG, node, 0, MPI_COMM_WORLD);
+      }
+      break;
+    }
+
+    i0++;
+    i1++;
+    i2++;
+    i3++;
   }
 
   if (id == 0) {
