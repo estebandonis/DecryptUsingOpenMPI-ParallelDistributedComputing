@@ -4,4 +4,6 @@ parallel
 randomsearch
 distributed
 .vscode
-*.ciph
+
+decrypted.txt
+encrypted.txt
