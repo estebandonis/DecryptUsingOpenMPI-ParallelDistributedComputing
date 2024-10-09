@@ -154,7 +154,7 @@ int main(int argc, char *argv[]){
   start_time = MPI_Wtime();
 
   // Calcula el rango de claves que cada proceso MPI debe buscar
-  int range_per_node = upper / N;
+  long range_per_node = upper / N;
   mylower = range_per_node * id;
   myupper = range_per_node * (id+1) - 1;
   if (id == N - 1) {

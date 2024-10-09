@@ -154,7 +154,7 @@ int main(int argc, char *argv[]){
   start_time = MPI_Wtime();
 
   // Calcula el rango de claves que cada proceso MPI debe buscar
-  int range_per_node = upper / N; 
+  long range_per_node = upper / N; 
   mylower = range_per_node * id;
   myupper = range_per_node * (id+1) - 1;
   if (id == N - 1) {
@@ -182,6 +182,7 @@ int main(int argc, char *argv[]){
     }
   }
 
+
   // Difunde el texto encriptado a todos los nodos
   MPI_Bcast(&textLength, 1, MPI_INT, 0, comm);
   if (id != 0) {
@@ -193,9 +194,9 @@ int main(int argc, char *argv[]){
 
   MPI_Irecv(&found, 1, MPI_LONG, MPI_ANY_SOURCE, MPI_ANY_TAG, comm, &req);
 
-  long q1 = mylower + range_per_node / 4;
-  long q2 = mylower + range_per_node / 2;
-  long q3 = mylower + 3 * range_per_node / 4;
+  long q1 = mylower + (range_per_node / 4);
+  long q2 = mylower + (range_per_node / 2);
+  long q3 = mylower + (3 * range_per_node / 4);
 
   long i0 = mylower;
   long i1 = q1;
