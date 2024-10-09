@@ -237,7 +237,7 @@ int main(int argc, char *argv[]){
 
     // Busca la clave en el 4/4 del rango
     if (i3 <= myupper && tryKey(i3, text, textLength)) {
-      found = i2;
+      found = i3;
       for (int node = 0; node < N; node++) {
         MPI_Send(&found, 1, MPI_LONG, node, 0, MPI_COMM_WORLD);
       }
