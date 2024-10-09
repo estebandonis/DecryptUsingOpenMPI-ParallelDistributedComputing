@@ -1,3 +1,17 @@
+/*
+  Universidad del Valle de Guatemala
+  Computación paralela y distribuida
+  Proyecto#2
+
+  Integrantes:
+  Abner Iván García Alegría 21285
+  Oscar Esteban Donis Martínez 21610
+  Dariel Eduardo Villatoro 20776
+   
+  - Compilación: mpicc -o distributed distributed.c -lcrypto -lssl -w
+  - Ejecución: mpirun -np 4 ./distributed -k <llave>
+*/
+
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
