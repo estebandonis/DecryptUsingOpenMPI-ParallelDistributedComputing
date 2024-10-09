@@ -115,123 +115,116 @@ int saveTextToFile(const char *filename, char *text, int length) {
   return 1;
 }
 
-int main(int argc, char *argv[]){
-  int N, id;
-  long upper = (1L << 56); // Límite superior para claves DES: 2^56
-  long mylower, myupper;
-  MPI_Status st;
-  MPI_Request req;
-  int flag;
-  MPI_Comm comm = MPI_COMM_WORLD;
+int main(int argc, char *argv[]) {
+    int N, id;
+    long upper = (1L << 56); // Límite superior para claves DES: 2^56
+    long mylower, myupper;
+    MPI_Status st;
+    MPI_Request req;
+    int flag;
+    MPI_Comm comm = MPI_COMM_WORLD;
 
-  MPI_Init(NULL, NULL);
-  MPI_Comm_size(comm, &N);
-  MPI_Comm_rank(comm, &id);
+    MPI_Init(NULL, NULL);
+    MPI_Comm_size(comm, &N);
+    MPI_Comm_rank(comm, &id);
 
-  clock_t start_time_C, end_time_C;
-  double start_time, end_time; // Variables para medir el tiempo de ejecución
-  long encryptionKey = 123456L; // Valor predeterminado para la clave de encriptación
+    clock_t start_time_C, end_time_C;
+    double start_time, end_time; // Variables para medir el tiempo de ejecución
+    long encryptionKey = 123456L; // Valor predeterminado para la clave de encriptación
 
-  int option;
+    int option;
 
-  // Procesa las opciones de la línea de comandos
-  while ((option = getopt(argc, argv, "k:")) != -1) {
-    switch (option) {
-      case 'k':
-        encryptionKey = atol(optarg);
-        break;
-      default:
-        fprintf(stderr, "Uso: %s [-k key]\n", argv[0]);
-        MPI_Finalize();
-        exit(1);
-    }
-  }
-
-  start_time_C = clock();
-
-  // Inicia el contador de tiempo
-  start_time = MPI_Wtime();
-
-  // Calcula el rango de claves que cada proceso MPI debe buscar
-  int range_per_node = upper / N;
-  mylower = range_per_node * id;
-  myupper = range_per_node * (id+1) - 1;
-  if (id == N - 1) {
-    // Compensar el residuo
-    myupper = upper;
-  }
-
-  char *text; // Texto para encriptar y desencriptar
-  int textLength;
-
-  if (id == 0) {
-    // Carga el texto desde un archivo (por ejemplo, "input.txt")
-    if (!loadTextFromFile("input.txt", &text, &textLength)) {
-      MPI_Finalize();
-      return 1;
+    // Procesa las opciones de la línea de comandos
+    while ((option = getopt(argc, argv, "k:")) != -1) {
+        switch (option) {
+            case 'k':
+                encryptionKey = atol(optarg);
+                break;
+            default:
+                fprintf(stderr, "Uso: %s [-k key]\n", argv[0]);
+                MPI_Finalize();
+                exit(1);
+        }
     }
 
-    printf("Texto a encriptar: %s\n", text);
+    start_time_C = clock();
+    start_time = MPI_Wtime();
 
-    encrypt(encryptionKey, text, textLength);
+    // Calcula el rango de claves que cada proceso MPI debe buscar
+    long range_per_node = upper / N;
+    mylower = range_per_node * id;
+    myupper = range_per_node * (id + 1) - 1;
 
-    // Guarda el texto encriptado en un archivo (por ejemplo, "encrypted.txt")
-    if (!saveTextToFile("encrypted.txt", text, textLength)) {
-      free(text);
-      MPI_Finalize();
-      return 1;
+    if (id == N - 1) {
+        myupper = upper; // El último proceso recibe cualquier residuo
     }
-  }
 
-  // Difunde el texto encriptado a todos los nodos
-  MPI_Bcast(&textLength, 1, MPI_INT, 0, comm);
-  if (id != 0) {
-    text = (char *)malloc(textLength);
-  }
-  MPI_Bcast(text, textLength, MPI_CHAR, 0, comm);
+    char *text;
+    int textLength;
 
-  long found = 0;
+    if (id == 0) {
+        if (!loadTextFromFile("input.txt", &text, &textLength)) {
+            MPI_Finalize();
+            return 1;
+        }
 
-  MPI_Irecv(&found, 1, MPI_LONG, MPI_ANY_SOURCE, MPI_ANY_TAG, comm, &req);
+        encrypt(encryptionKey, text, textLength);
 
-  for (int i = mylower; i < myupper && (found == 0); ++i) {
-    if (tryKey(i, text, textLength)) {
-      found = i;
-      for (int node = 0; node < N; node++) {
-        MPI_Send(&found, 1, MPI_LONG, node, 0, MPI_COMM_WORLD);
-      }
-      break;
+        if (!saveTextToFile("encrypted.txt", text, textLength)) {
+            free(text);
+            MPI_Finalize();
+            return 1;
+        }
     }
-  }
 
-  if (id == 0) {
-    MPI_Wait(&req, &st);
-    decrypt(found, text, textLength);
-
-    // Termina el contador de tiempo
-    end_time = MPI_Wtime();
-    end_time_C = clock();
-
-    printf("Texto desencriptado: %s\n", text);
-
-    // Imprime el texto desencriptado y la clave de encriptación
-    printf("Tiempo de ejecución MPI: %f segundos\n", end_time - start_time);
-
-    // Calcula el tiempo transcurrido
-    double execution_time = (double)(end_time_C - start_time_C) / CLOCKS_PER_SEC;
-
-    // Imprime el tiempo de ejecución en segundos
-    printf("Tiempo de ejecución del programa: %f segundos\n", execution_time);
-
-    // Guarda el texto desencriptado en un archivo (por ejemplo, "decrypted.txt")
-    if (!saveTextToFile("decrypted.txt", text, textLength)) {
-      free(text);
-      MPI_Finalize();
-      return 1;
+    MPI_Bcast(&textLength, 1, MPI_INT, 0, comm);
+    if (id != 0) {
+        text = (char *)malloc(textLength);
     }
-  }
+    MPI_Bcast(text, textLength, MPI_CHAR, 0, comm);
 
-  free(text);
+    long found = 0;
+    MPI_Irecv(&found, 1, MPI_LONG, MPI_ANY_SOURCE, MPI_ANY_TAG, comm, &req);
 
-  MPI_Finalize();
+    // Búsqueda comenzando desde el límite inferior
+    for (long i = mylower; i <= myupper && found == 0; i++) {
+        if (tryKey(i, text, textLength)) {
+            found = i;
+
+            // Notificar a todos los procesos que se ha encontrado la clave
+            for (int node = 0; node < N; node++) {
+                MPI_Send(&found, 1, MPI_LONG, node, 0, comm);
+            }
+
+            break;
+        }
+
+        MPI_Test(&req, &flag, &st);
+        if (flag) {  // Si se ha encontrado la clave por otro proceso
+            break;
+        }
+    }
+
+    if (id == 0) {
+        MPI_Wait(&req, &st);
+        decrypt(found, text, textLength);
+
+        end_time = MPI_Wtime();
+        end_time_C = clock();
+
+        printf("Clave encontrada: %ld\n", found);
+        printf("Mensaje desencriptado: %s\n", text);
+        printf("Tiempo de ejecución MPI: %f segundos\n", end_time - start_time);
+        double execution_time = (double)(end_time_C - start_time_C) / CLOCKS_PER_SEC;
+        printf("Tiempo de ejecución: %f segundos\n", execution_time);
+
+        if (!saveTextToFile("decrypted.txt", text, textLength)) {
+            free(text);
+            MPI_Finalize();
+            return 1;
+        }
+    }
+
+    free(text);
+    MPI_Finalize();
 }
