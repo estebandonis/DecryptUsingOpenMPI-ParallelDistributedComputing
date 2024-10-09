@@ -54,22 +54,6 @@ void encrypt(long key, char *ciph, int len) {
     }
 }
 
-char search[] = "es una prueba de";
-
-int tryKey(long key, char *ciph, int len) {
-    char temp[len + 1];
-    memcpy(temp, ciph, len);
-    temp[len] = 0;
-    decrypt(key, temp, len);
-
-    if (strstr((char *)temp, search) != NULL) {
-        printf("Key found: %li\n", key);
-        return 1;
-    }
-
-    return 0;
-}
-
 int loadTextFromFile(const char *filename, char **text, int *length) {
     FILE *file = fopen(filename, "r");
     if (file == NULL) {
@@ -94,6 +78,22 @@ int loadTextFromFile(const char *filename, char **text, int *length) {
     return 1;
 }
 
+char search[] = "es una prueba de";
+
+int tryKey(long key, char *ciph, int len){
+  char temp[len+1];
+  memcpy(temp, ciph, len);
+  temp[len]=0;
+  decrypt(key, temp, len);
+  
+  if (strstr((char *)temp, search) != NULL) {
+    printf("Clave encontrada: %li\n", key);
+    return 1;
+  }
+  
+  return 0;
+}
+
 int saveTextToFile(const char *filename, char *text, int length) {
     FILE *file = fopen(filename, "w");
     if (file == NULL) {
@@ -107,20 +107,17 @@ int saveTextToFile(const char *filename, char *text, int length) {
     return 1;
 }
 
-unsigned char cipher[] = {108, 245, 65, 63, 125, 200, 150, 66, 17, 170, 207, 170, 34, 31, 70, 215, 0};
-
 int main(int argc, char *argv[]) {
-    long upper = (1L << 56);
-    long mylower = 0;
-    long myupper = upper;
+    long upper = (1L << 56); // Límite superior para claves DES: 2^56
+    long lower = 0;
+    long encryptionKey = 123456L;
     char *text;
     int textLength;
 
     clock_t start_time, end_time;
-    long encryptionKey = 123456L;
 
+    // Parseo de argumento para la llave
     int option;
-
     while ((option = getopt(argc, argv, "k:")) != -1) {
         switch (option) {
         case 'k':
@@ -132,54 +129,55 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    start_time = clock();
-
+    // Leer el texto desde el archivo input.txt
     if (!loadTextFromFile("input.txt", &text, &textLength)) {
         return 1;
     }
 
-    // aplicar padding
+    // Aplicar padding si es necesario
     int padding = 8 - (textLength % 8);
     if (padding < 8) {
         memset(text + textLength, padding, padding);
         textLength += padding;
     }
 
-    encrypt(encryptionKey, text, textLength);
+    printf("Texto a encriptar: %s\n", text);
+    printf("Llave de encriptación: %li\n", encryptionKey);
 
+    // Medir el tiempo de desencriptación
+    start_time = clock();
+
+    // Encriptar el texto
+    encrypt(encryptionKey, text, textLength);
+    
+    // Guardar el texto encriptado
     if (!saveTextToFile("encrypted.txt", text, textLength)) {
         free(text);
         return 1;
     }
 
-    free(text);
-
-    long found = 0;
-
-    for (long i = mylower; i < myupper && (found == 0); ++i) {
+    for (int i = lower; i < upper; ++i) {
         if (tryKey(i, text, textLength)) {
-            found = i;
+            // Desencriptar el texto
+            decrypt(i, text, textLength);
+
+            // Terminar la medición de tiempo
+            end_time = clock();
+
+            // Mostrar el mensaje desencriptado y el tiempo
+            printf("Mensaje desencriptado: %s\n", text);
+            printf("Tiempo tomado para desencriptar: %f segundos\n", ((double)(end_time - start_time)) / CLOCKS_PER_SEC);
+
+            // Guardar el texto desencriptado en un archivo
+            if (!saveTextToFile("decrypted.txt", text, textLength)) {
+                free(text);
+                return 1;
+            }
             break;
         }
     }
 
     end_time = clock();
-
-    text = (char *)malloc(textLength);
-    if (!loadTextFromFile("encrypted.txt", &text, &textLength)) {
-        free(text);
-        return 1;
-    }
-
-    decrypt(found, text, textLength);
-
-    printf("%li %s\n", found, text);
-    printf("Execution time: %f seconds\n", ((double)(end_time - start_time)) / CLOCKS_PER_SEC);
-
-    if (!saveTextToFile("decrypted.txt", text, textLength)) {
-        free(text);
-        return 1;
-    }
 
     free(text);
 

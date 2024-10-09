@@ -171,6 +171,8 @@ int main(int argc, char *argv[]){
       return 1;
     }
 
+    printf("Texto a encriptar: %s\n", text);
+
     encrypt(encryptionKey, text, textLength);
 
     // Guarda el texto encriptado en un archivo (por ejemplo, "encrypted.txt")
@@ -210,6 +212,8 @@ int main(int argc, char *argv[]){
     end_time = MPI_Wtime();
     end_time_C = clock();
 
+    printf("Texto desencriptado: %s\n", text);
+
     // Imprime el texto desencriptado y la clave de encriptación
     printf("Tiempo de ejecución MPI: %f segundos\n", end_time - start_time);
 
@@ -217,7 +221,7 @@ int main(int argc, char *argv[]){
     double execution_time = (double)(end_time_C - start_time_C) / CLOCKS_PER_SEC;
 
     // Imprime el tiempo de ejecución en segundos
-    printf("Tiempo de ejecución: %f segundos\n", execution_time);
+    printf("Tiempo de ejecución del programa: %f segundos\n", execution_time);
 
     // Guarda el texto desencriptado en un archivo (por ejemplo, "decrypted.txt")
     if (!saveTextToFile("decrypted.txt", text, textLength)) {
