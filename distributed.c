@@ -195,7 +195,7 @@ int main(int argc, char *argv[]){
 
   long q1 = mylower + range_per_node / 4;
   long q2 = mylower + range_per_node / 2;
-  long q3 = mylower + q1 + q2;
+  long q3 = mylower + 3 * range_per_node / 4;
 
   long i0 = mylower;
   long i1 = q1;
