@@ -67,7 +67,6 @@ int tryKey(long key, char *ciph, int len){
   
   // Busca la cadena " the " en el texto desencriptado
   if (strstr((char *)temp, search) != NULL) {
-    printf("Clave encontrada: %li\n", key);
     return 1;
   }
   
