@@ -3,8 +3,8 @@
   Computación paralela y distribuida
   Proyecto#2
 
-  - Compilación: mpicc -o bruteforce bruteforce.c -lcrypto -lssl -w
-  - Ejecución: mpirun -np 4 ./bruteforce -k <llave>
+  - Compilación: mpicc -o doublesearch doublesearch.c -lcrypto -lssl -w
+  - Ejecución: mpirun -np 4 ./doublesearch -k <llave>
 */
 
 #include <string.h>
