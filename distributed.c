@@ -205,7 +205,7 @@ int main(int argc, char *argv[]){
 
   // Distribuye el trabajo entre los nodos
   while (
-    (i0 < q1 || i1 < q2 || i2 < q3 || i3 <= myupper) &&
+    (i0 < q1 && i1 < q2 && i2 < q3 && i3 <= myupper) &&
     (found == 0)
     ) {
     // Busca la clave en el 1/4 del rango
@@ -248,6 +248,11 @@ int main(int argc, char *argv[]){
     i1++;
     i2++;
     i3++;
+
+    MPI_Test(&req, &flag, &st);
+    if (flag) {  // Si se ha encontrado la clave por otro proceso
+        break;
+    }
   }
 
   if (id == 0) {

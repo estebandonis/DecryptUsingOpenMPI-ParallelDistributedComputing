@@ -193,12 +193,22 @@ int main(int argc, char *argv[]){
 
   MPI_Irecv(&found, 1, MPI_LONG, MPI_ANY_SOURCE, MPI_ANY_TAG, comm, &req);
 
+  long left_edge = mylower;
   long left_side = (mylower + myupper) / 2;
   long right_side = left_side + 1;
+  long right_edge = myupper;
 
   // Distribuye el trabajo entre los nodos 
-  while (left_side >= mylower && right_side <= myupper && (found == 0)) {
+  while (left_side >= left_edge && right_side <= right_edge && (found == 0)) {
     // Busca la clave en el lado izquierdo del rango
+    if (tryKey(left_edge, text, textLength)) {
+      found = left_edge;
+      for (int node = 0; node < N; node++) {
+        MPI_Send(&found, 1, MPI_LONG, node, 0, MPI_COMM_WORLD);
+      }
+      break;
+    }
+
     if (tryKey(left_side, text, textLength)) {
       found = left_side;
       for (int node = 0; node < N; node++) {
@@ -208,6 +218,14 @@ int main(int argc, char *argv[]){
     }
 
     // Busca la clave en el lado derecho del rango
+    if (tryKey(right_edge, text, textLength)) {
+      found = right_edge;
+      for (int node = 0; node < N; node++) {
+        MPI_Send(&found, 1, MPI_LONG, node, 0, MPI_COMM_WORLD);
+      }
+      break;
+    }
+
     if (tryKey(right_side, text, textLength)) {
       found = right_side;
       for (int node = 0; node < N; node++) {
@@ -216,8 +234,15 @@ int main(int argc, char *argv[]){
       break;
     }
 
+    left_edge++;
     left_side--;
     right_side++;
+    right_edge--;
+
+    MPI_Test(&req, &flag, &st);
+    if (flag) {  // Si se ha encontrado la clave por otro proceso
+      break;
+    }
   }
 
   if (id == 0) {
