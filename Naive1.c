@@ -7,9 +7,14 @@
   Abner Iván García Alegría 21285
   Oscar Esteban Donis Martínez 21610
   Dariel Eduardo Villatoro 20776
+
+  Archivo: naive1.c
+
+  Proposito: Implementa un algoritmo de fuerza bruta para poder decifrar una 
+             frase cifrada con el algoritmo DES de manera paralela de forma naive.
    
-  - Compilación: mpicc -o distributed distributed.c -lcrypto -lssl -w
-  - Ejecución: mpirun -np 4 ./distributed -k <llave>
+  - Compilación: mpicc -o naive1 naive1.c -lcrypto -lssl -w
+  - Ejecución: mpirun -np 4 ./naive1 -k <llave>
 */
 
 #include <string.h>
@@ -21,6 +26,13 @@
 #include <ctype.h>
 #include <time.h>
 
+/**
+ * Función para desencriptar un texto cifrado con DES
+ * 
+ * @param key Clave de encriptación
+ * @param ciph Texto cifrado
+ * @param len Longitud del texto cifrado
+ */
 void decrypt(long key, char *ciph, int len) {
     DES_cblock key_block;
     DES_key_schedule schedule;
@@ -32,6 +44,13 @@ void decrypt(long key, char *ciph, int len) {
     }
 }
 
+/**
+ * Función para encriptar un texto con DES
+ * 
+ * @param key Clave de encriptación
+ * @param ciph Texto a encriptar
+ * @param len Longitud del texto a encriptar
+ */
 void encrypt(long key, char *ciph, int len){
     // printf("Encrypting with key: %ld\n", key);
 
@@ -54,6 +73,14 @@ void encrypt(long key, char *ciph, int len){
 
 char search[] = "es una prueba de";
 
+/**
+ * Función para cargar un texto desde un archivo
+ * 
+ * @param filename Nombre del archivo
+ * @param text Puntero a la variable texto donde cargar el contenido
+ * @param length Longitud del texto cargado
+ * @return 1 si se cargó correctamente, 0 si hubo un error
+ */
 int loadTextFromFile(const char *filename, char **text, int *length) {
   FILE *file = fopen(filename, "r");
   if (file == NULL) {
@@ -81,6 +108,15 @@ int loadTextFromFile(const char *filename, char **text, int *length) {
   return 1;
 }
 
+/**
+ * Función para guardar un texto en un archivo
+ * 
+ * @param filename Nombre del archivo
+ * @param text Texto a guardar
+ * @param length Longitud del texto
+ * 
+ * @return 1 si se guardó correctamente, 0 si hubo un error
+ */
 int saveTextToFile(const char *filename, char *text, int length) {
   FILE *file = fopen(filename, "w");
   if (file == NULL) {
@@ -95,6 +131,16 @@ int saveTextToFile(const char *filename, char *text, int length) {
   return 1;
 }
 
+/**
+ * Función para intentar un rango de claves en un texto cifrado
+ * 
+ * @param lower Limite inferior de claves a intentar
+ * @param upper Limite superior de claves a intentar
+ * @param ciph Texto cifrado
+ * @param len Longitud del texto cifrado
+ * 
+ * @return 1 si la clave fue encontrada, 0 si no
+ */
 int tryKeys(long lower, long upper, char *ciph, int len) {
   for (long key = lower; key <= upper; key++) {
     char temp[len + 1];
@@ -109,6 +155,14 @@ int tryKeys(long lower, long upper, char *ciph, int len) {
   return -1; // Indicar que no se encontró la clave
 }
 
+/**
+ * Función principal
+ * 
+ * @param argc Cantidad de argumentos
+ * @param argv Argumentos
+ * 
+ * @return 0 si se ejecutó correctamente, 1 si hubo un error
+ */
 int main(int argc, char *argv[]) {
   int N, id;
   long upper = (1L << 56);

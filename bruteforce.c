@@ -7,7 +7,12 @@
   Abner Iván García Alegría 21285
   Oscar Esteban Donis Martínez 21610
   Dariel Eduardo Villatoro 20776
-  
+
+  Archivo: bruteforce.c
+
+  Proposito: Implementa un algoritmo de fuerza bruta para poder decifrar una 
+             frase cifrada con el algoritmo DES de manera paralela.
+
   - Compilación: mpicc -o bruteforce bruteforce.c -lcrypto -lssl -w
   - Ejecución: mpirun -np 4 ./bruteforce -k <llave>
 */
@@ -21,6 +26,13 @@
 #include <ctype.h>
 #include <time.h>
 
+/**
+ * Función para desencriptar un texto cifrado con DES
+ * 
+ * @param key Clave de encriptación
+ * @param ciph Texto cifrado
+ * @param len Longitud del texto cifrado
+ */
 void decrypt(long key, char *ciph, int len) {
     // printf("Decrypting with key: %ld\n", key);
 
@@ -42,6 +54,13 @@ void decrypt(long key, char *ciph, int len) {
     }
 }
 
+/**
+ * Función para encriptar un texto con DES
+ * 
+ * @param key Clave de encriptación
+ * @param ciph Texto a encriptar
+ * @param len Longitud del texto a encriptar
+ */
 void encrypt(long key, char *ciph, int len){
     // printf("Encrypting with key: %ld\n", key);
 
@@ -64,6 +83,13 @@ void encrypt(long key, char *ciph, int len){
 
 char search[] = "es una prueba de";
 
+/**
+ * Función para encriptar un texto con DES
+ * 
+ * @param key Clave de encriptación
+ * @param ciph Texto a encriptar
+ * @param len Longitud del texto a encriptar
+ */
 int tryKey(long key, char *ciph, int len){
   char temp[len+1];
   memcpy(temp, ciph, len);
@@ -78,6 +104,14 @@ int tryKey(long key, char *ciph, int len){
   return 0;
 }
 
+/**
+ * Función para cargar un texto desde un archivo
+ * 
+ * @param filename Nombre del archivo
+ * @param text Puntero a la variable texto donde cargar el contenido
+ * @param length Longitud del texto cargado
+ * @return 1 si se cargó correctamente, 0 si hubo un error
+ */
 int loadTextFromFile(const char *filename, char **text, int *length) {
   FILE *file = fopen(filename, "r");
   if (file == NULL) {
@@ -105,6 +139,15 @@ int loadTextFromFile(const char *filename, char **text, int *length) {
   return 1;
 }
 
+/**
+ * Función para guardar un texto en un archivo
+ * 
+ * @param filename Nombre del archivo
+ * @param text Texto a guardar
+ * @param length Longitud del texto
+ * 
+ * @return 1 si se guardó correctamente, 0 si hubo un error
+ */
 int saveTextToFile(const char *filename, char *text, int length) {
   FILE *file = fopen(filename, "w");
   if (file == NULL) {
@@ -119,6 +162,14 @@ int saveTextToFile(const char *filename, char *text, int length) {
   return 1;
 }
 
+/**
+ * Función principal
+ * 
+ * @param argc Cantidad de argumentos
+ * @param argv Argumentos
+ * 
+ * @return 0 si se ejecutó correctamente, 1 si hubo un error
+ */
 int main(int argc, char *argv[]) {
     int N, id;
     long upper = (1L << 56); // Límite superior para claves DES: 2^56
