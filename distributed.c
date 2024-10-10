@@ -252,10 +252,12 @@ int main(int argc, char *argv[]){
 
   MPI_Irecv(&found, 1, MPI_LONG, MPI_ANY_SOURCE, MPI_ANY_TAG, comm, &req);
 
+  // Definir cuartetos
   long q1 = mylower + (range_per_node / 4);
   long q2 = mylower + (range_per_node / 2);
   long q3 = mylower + (3 * range_per_node / 4);
 
+  // Definir indices para cada cuarteto
   long i0 = mylower;
   long i1 = q1;
   long i2 = q2;
